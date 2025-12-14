@@ -15,10 +15,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- React & Babel for Static Runtime -->
+    <!-- React & Babel pour exécution sans build (Static Runtime) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Import Map for Modules -->
+    <!-- Import Map pour gérer les dépendances via CDN -->
     <script type="importmap">
 {
   "imports": {
@@ -63,22 +63,24 @@
         background-color: #0f172a;
         margin: 0;
       }
-      .visualizer-bar {
-        transition: height 0.15s ease;
+      /* Animation utilitaire pour le visualiseur */
+      @keyframes bounce-visualizer {
+        0%, 100% { height: 4px; }
+        50% { height: 24px; }
       }
     </style>
   </head>
   <body class="antialiased text-slate-100 bg-slate-900">
     <div id="root"></div>
 
-    <!-- Application Logic -->
+    <!-- LOGIQUE DE L'APPLICATION (Tout le code React ici) -->
     <script type="text/babel" data-type="module">
       import React, { useState, useEffect, useRef } from 'react';
       import { createRoot } from 'react-dom/client';
       import { Play, Pause, Volume2, VolumeX, Loader2, Wifi, Facebook, Twitter, Instagram, Globe, Youtube, Phone } from 'lucide-react';
       import Hls from 'hls.js';
 
-      // --- CONFIGURATION ---
+      // --- 1. CONFIGURATION ---
       const radioConfig = {
         stationName: "RADIO IQRA FM",
         tagline: "La voix du saint coran",
@@ -95,13 +97,13 @@
         ]
       };
 
-      // --- COMPONENTS ---
+      // --- 2. COMPOSANTS ---
 
-      // Header Component
+      // --- Header ---
       const Header = ({ config, isPlaying }) => {
         return (
           <div className="flex flex-col items-center justify-center space-y-6 mb-8">
-            {/* Logo Container with Glow Effect */}
+            {/* Logo avec effet de lueur */}
             <div className="relative group">
               <div className={`absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full blur opacity-25 transition duration-1000 group-hover:opacity-50 ${isPlaying ? 'opacity-60 animate-pulse-slow' : ''}`}></div>
               <div className="relative w-40 h-40 sm:w-48 sm:h-48 rounded-full overflow-hidden border-4 border-slate-800 shadow-2xl bg-slate-900 flex items-center justify-center">
@@ -113,7 +115,7 @@
               </div>
             </div>
 
-            {/* Text Info */}
+            {/* Informations Texte */}
             <div className="text-center space-y-2">
               <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-white">
                 {config.stationName}
@@ -123,14 +125,14 @@
               </p>
             </div>
 
-            {/* Live Indicator */}
+            {/* Indicateur Live */}
             <div className="flex items-center space-x-2 bg-slate-800/50 px-4 py-1.5 rounded-full backdrop-blur-sm border border-slate-700/50">
               <div className={`relative flex h-3 w-3`}>
                  {isPlaying && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>}
                  <span className={`relative inline-flex rounded-full h-3 w-3 ${isPlaying ? 'bg-red-500' : 'bg-slate-500'}`}></span>
               </div>
               <span className={`text-xs font-semibold tracking-wider ${isPlaying ? 'text-red-400' : 'text-slate-500'}`}>
-                {isPlaying ? 'ON AIR' : 'OFFLINE'}
+                {isPlaying ? 'EN DIRECT' : 'HORS LIGNE'}
               </span>
               {isPlaying && <Wifi className="w-3 h-3 text-red-400 animate-pulse" />}
             </div>
@@ -138,7 +140,7 @@
         );
       };
 
-      // AudioVisualizer Component
+      // --- Visualiseur Audio ---
       const AudioVisualizer = ({ isPlaying }) => {
         return (
           <div className="flex items-center justify-center h-12 space-x-1">
@@ -146,12 +148,12 @@
               <div
                 key={i}
                 className={`w-1.5 bg-blue-500 rounded-full transition-all duration-300 ease-in-out ${
-                  isPlaying ? 'animate-[bounce_1s_infinite]' : 'h-1 opacity-30'
+                  isPlaying ? 'animate-[bounce-small_1s_infinite]' : 'h-1 opacity-30'
                 }`}
                 style={{
                   height: isPlaying ? undefined : '4px',
                   animationDelay: `${i * 0.1}s`,
-                  animationDuration: `${0.8 + Math.random() * 0.5}s`
+                  animationDuration: `${0.6 + Math.random() * 0.4}s`
                 }}
               ></div>
             ))}
@@ -159,7 +161,7 @@
         );
       };
 
-      // SocialLinks Component
+      // --- Liens Sociaux ---
       const SocialLinks = ({ links }) => {
         const getIcon = (platform) => {
           switch (platform) {
@@ -168,6 +170,8 @@
             case 'instagram': return <Instagram className="w-5 h-5" />;
             case 'whatsapp': return <Phone className="w-5 h-5" />;
             case 'youtube': return <Youtube className="w-5 h-5" />;
+            // Ajout du support TikTok générique ou mappé sur Globe si l'icône n'est pas dispo
+            case 'tiktok': return <Globe className="w-5 h-5" />; 
             default: return <Globe className="w-5 h-5" />;
           }
         };
@@ -183,7 +187,7 @@
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-3 bg-slate-800 text-slate-400 rounded-full hover:bg-slate-700 hover:text-white transition-all duration-300 hover:-translate-y-1 border border-slate-700 shadow-md"
-                aria-label={`Visit our ${link.platform}`}
+                aria-label={`Visiter notre ${link.platform}`}
               >
                 {getIcon(link.platform)}
               </a>
@@ -192,7 +196,7 @@
         );
       };
 
-      // Controls Component (Main Logic)
+      // --- Contrôles (Logique Player) ---
       const Controls = ({ config, isPlaying, setIsPlaying }) => {
         const audioRef = useRef(null);
         const hlsRef = useRef(null);
@@ -202,35 +206,27 @@
         const [isMuted, setIsMuted] = useState(false);
         const [error, setError] = useState(null);
 
-        // Helper to resolve playlist URLs
+        // Résoudre les playlists .m3u / .pls
         const resolveStreamUrl = async (url) => {
-          if (!url.match(/\.(m3u|pls)$/i)) {
-            return url;
-          }
-
+          if (!url.match(/\.(m3u|pls)$/i)) return url;
           try {
             const response = await fetch(url);
-            if (!response.ok) throw new Error('Network response was not ok');
+            if (!response.ok) throw new Error('Erreur réseau');
             const text = await response.text();
 
             if (url.endsWith('.m3u')) {
               const lines = text.split('\n');
               for (const line of lines) {
                 const trimmed = line.trim();
-                if (trimmed && !trimmed.startsWith('#')) {
-                  return trimmed;
-                }
+                if (trimmed && !trimmed.startsWith('#')) return trimmed;
               }
             }
-
             if (url.endsWith('.pls')) {
               const match = text.match(/File1=(.+)/i);
-              if (match && match[1]) {
-                return match[1].trim();
-              }
+              if (match && match[1]) return match[1].trim();
             }
           } catch (err) {
-            console.warn("Playlist parsing failed (likely CORS), trying direct.", err);
+            console.warn("Erreur parsing playlist, essai direct.", err);
           }
           return url;
         };
@@ -258,14 +254,12 @@
 
             try {
               const playableUrl = await resolveStreamUrl(config.streamUrl);
-              
               if (isCancelled) return;
 
               if (Hls.isSupported() && (playableUrl.endsWith('.m3u8') || playableUrl.includes('application/vnd.apple.mpegurl'))) {
                 const hls = new Hls();
                 hls.loadSource(playableUrl);
                 hls.attachMedia(audio);
-                
                 hls.on(Hls.Events.ERROR, function (event, data) {
                   if (data.fatal) {
                     console.error("HLS Error:", data);
@@ -274,14 +268,12 @@
                     setIsPlaying(false);
                   }
                 });
-                
                 hlsRef.current = hls;
               } else if (audio.canPlayType('application/vnd.apple.mpegurl') && (playableUrl.endsWith('.m3u8'))) {
                 audio.src = playableUrl;
               } else {
                 audio.src = playableUrl;
               }
-
             } catch (e) {
               console.error("Init Error:", e);
               if (!isCancelled) setError("Erreur de connexion");
@@ -299,7 +291,6 @@
           };
           const handleError = (e) => {
               if (audio.src === "") return;
-              console.error("Audio error:", e);
               setIsLoading(false);
               setIsPlaying(false);
               setError("Flux indisponible");
@@ -317,9 +308,7 @@
             audio.removeEventListener('playing', handlePlaying);
             audio.removeEventListener('canplay', handleCanPlay);
             audio.removeEventListener('error', handleError);
-            if (hlsRef.current) {
-              hlsRef.current.destroy();
-            }
+            if (hlsRef.current) hlsRef.current.destroy();
             audioRef.current = null;
           };
         }, [config.streamUrl, setIsPlaying]);
@@ -339,11 +328,11 @@
           } else {
             setIsLoading(true);
             setError(null);
-
-            if (hlsRef.current) {
-                if (error) hlsRef.current.recoverMediaError();
-            } else {
-                if (error || audioRef.current.error) audioRef.current.load();
+            
+            if (hlsRef.current && error) {
+                hlsRef.current.recoverMediaError();
+            } else if (error || audioRef.current.error) {
+                audioRef.current.load();
             }
 
             try {
@@ -365,7 +354,6 @@
 
         return (
           <div className="w-full max-w-md mx-auto bg-slate-800/80 backdrop-blur-md rounded-3xl p-6 shadow-2xl border border-slate-700/50">
-            
             {/* Visualizer Area */}
             <div className="h-16 mb-4 flex items-center justify-center">
               {error ? (
@@ -375,7 +363,7 @@
               )}
             </div>
 
-            {/* Main Play Button */}
+            {/* Bouton Play/Pause Principal */}
             <div className="flex justify-center mb-8">
               <button
                 onClick={togglePlay}
@@ -397,7 +385,7 @@
               </button>
             </div>
 
-            {/* Volume Controls */}
+            {/* Contrôle Volume */}
             <div className="flex items-center space-x-4 px-4 py-3 bg-slate-900/50 rounded-xl border border-slate-700/30">
               <button 
                   onClick={toggleMute}
@@ -420,18 +408,18 @@
         );
       };
 
-      // --- MAIN APP COMPONENT ---
+      // --- APP PRINCIPALE ---
       const App = () => {
         const [isPlaying, setIsPlaying] = useState(false);
 
         return (
           <div className="min-h-screen bg-slate-900 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black flex items-center justify-center p-4 sm:p-6 overflow-hidden relative">
             
-            {/* Background Decorative Elements */}
+            {/* Éléments décoratifs en arrière-plan */}
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
             <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
             
-            {/* Main Card */}
+            {/* Carte Principale */}
             <main className="w-full max-w-lg z-10">
               <div className="bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl p-6 sm:p-10">
                 
@@ -454,7 +442,7 @@
         );
       };
 
-      // --- MOUNT ---
+      // --- MONTAGE ---
       const root = createRoot(document.getElementById('root'));
       root.render(<App />);
     </script>
